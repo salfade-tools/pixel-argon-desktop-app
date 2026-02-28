@@ -174,6 +174,9 @@ function initApp() {
     renderCanvas();
   });
 
+  // Apply button
+  $("btn-apply").addEventListener("click", applyEdits);
+
   // Pixelate controls
   $("pixelate-size").addEventListener("input", () => {
     state.pixelateBrushSize = parseInt(
@@ -924,6 +927,78 @@ function onKeyDown(e: KeyboardEvent) {
     zoomFit();
   } else if (e.key === "2" && !ctrl) {
     setZoom(1);
+  }
+}
+
+// ─── Apply Edits ─────────────────────────────────────────────────────────────
+
+async function applyEdits() {
+  if (!state.sourcePath) return;
+
+  const hasEdits =
+    state.rotation !== 0 ||
+    state.flipH ||
+    state.flipV ||
+    state.grayscale ||
+    state.brightness !== 0 ||
+    state.contrast !== 0 ||
+    state.pixelateStrokes.length > 0;
+
+  if (!hasEdits) {
+    showToast("No adjustments to apply", "error");
+    return;
+  }
+
+  try {
+    const info: ImageInfo = await invoke("apply_edits", {
+      payload: {
+        source_path: state.sourcePath,
+        rotation: state.rotation,
+        flip_h: state.flipH,
+        flip_v: state.flipV,
+        grayscale: state.grayscale,
+        brightness: state.brightness,
+        contrast: state.contrast,
+        pixelate_strokes: state.pixelateStrokes,
+        pixelate_block_size: state.pixelateBlockSize,
+      },
+    });
+
+    // Update source to the applied temp file
+    const appliedPath: string = await invoke("get_applied_path");
+    state.sourcePath = appliedPath;
+    state.imageWidth = info.width;
+    state.imageHeight = info.height;
+
+    // Reset all adjustments
+    state.rotation = 0;
+    state.flipH = false;
+    state.flipV = false;
+    state.grayscale = false;
+    state.brightness = 0;
+    state.contrast = 0;
+    state.pixelateStrokes = [];
+    state.pixelateRedoStack = [];
+
+    ($("edit-brightness") as HTMLInputElement).value = "0";
+    ($("edit-contrast") as HTMLInputElement).value = "0";
+    ($("edit-grayscale") as HTMLInputElement).checked = false;
+    $("brightness-val").textContent = "0";
+    $("contrast-val").textContent = "0";
+
+    // Reload the canvas with the new image
+    const img = new Image();
+    img.onload = () => {
+      loadedImage = img;
+      $("image-info").textContent = `${info.width} × ${info.height} — Applied`;
+      renderCanvas();
+      if (state.tool === "crop") updateCropOverlay();
+    };
+    img.src = info.data_url;
+
+    showToast("Adjustments applied", "success");
+  } catch (e: any) {
+    showToast("Apply failed: " + e, "error");
   }
 }
 

@@ -274,6 +274,97 @@ fn chroma_key(img: &mut RgbaImage, color: (u8, u8, u8), tolerance: f64) {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ApplyPayload {
+    pub source_path: String,
+    pub rotation: i32,
+    pub flip_h: bool,
+    pub flip_v: bool,
+    pub grayscale: bool,
+    pub brightness: f64,
+    pub contrast: f64,
+    pub pixelate_strokes: Vec<PixelateStroke>,
+    pub pixelate_block_size: u32,
+}
+
+#[tauri::command]
+fn apply_edits(app: tauri::AppHandle, payload: ApplyPayload) -> Result<ImageInfo, String> {
+    let mut img =
+        image::open(&payload.source_path).map_err(|e| format!("Failed to open image: {}", e))?;
+
+    // Rotate
+    img = match payload.rotation {
+        90 | -270 => DynamicImage::ImageRgba8(image::imageops::rotate90(&img.to_rgba8())),
+        180 | -180 => DynamicImage::ImageRgba8(image::imageops::rotate180(&img.to_rgba8())),
+        270 | -90 => DynamicImage::ImageRgba8(image::imageops::rotate270(&img.to_rgba8())),
+        _ => img,
+    };
+
+    // Flip
+    if payload.flip_h {
+        img = DynamicImage::ImageRgba8(image::imageops::flip_horizontal(&img.to_rgba8()));
+    }
+    if payload.flip_v {
+        img = DynamicImage::ImageRgba8(image::imageops::flip_vertical(&img.to_rgba8()));
+    }
+
+    // Grayscale
+    if payload.grayscale {
+        img = DynamicImage::ImageLuma8(img.to_luma8()).to_rgba8().into();
+    }
+
+    // Brightness & Contrast
+    if payload.brightness != 0.0 || payload.contrast != 0.0 {
+        let mut rgba = img.to_rgba8();
+        apply_brightness_contrast(&mut rgba, payload.brightness, payload.contrast);
+        img = DynamicImage::ImageRgba8(rgba);
+    }
+
+    // Pixelate strokes
+    if !payload.pixelate_strokes.is_empty() {
+        let mut rgba = img.to_rgba8();
+        let (w, h) = (rgba.width(), rgba.height());
+        let block_size = payload.pixelate_block_size.max(4);
+        for stroke in &payload.pixelate_strokes {
+            for &(nx, ny) in &stroke.points {
+                let cx = (nx * w as f64) as i32;
+                let cy = (ny * h as f64) as i32;
+                let r = (stroke.radius * w.max(h) as f64) as i32;
+                pixelate_region(&mut rgba, cx, cy, r, block_size);
+            }
+        }
+        img = DynamicImage::ImageRgba8(rgba);
+    }
+
+    // Save to temp file
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+    let temp_path = data_dir.join("_applied.png");
+    img.save_with_format(&temp_path, image::ImageFormat::Png)
+        .map_err(|e| format!("Failed to save applied image: {}", e))?;
+
+    let (width, height) = img.dimensions();
+    let rgba = img.to_rgba8();
+    let mut png_buf = std::io::Cursor::new(Vec::new());
+    rgba.write_to(&mut png_buf, image::ImageFormat::Png)
+        .map_err(|e| format!("Failed to encode preview: {}", e))?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(png_buf.into_inner());
+    let data_url = format!("data:image/png;base64,{}", b64);
+
+    Ok(ImageInfo {
+        width,
+        height,
+        data_url,
+    })
+}
+
+#[tauri::command]
+fn get_applied_path(app: tauri::AppHandle) -> Result<String, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let temp_path = data_dir.join("_applied.png");
+    Ok(temp_path.to_string_lossy().to_string())
+}
+
 #[tauri::command]
 fn get_recent_files(app: tauri::AppHandle) -> Vec<String> {
     let data_dir = app.path().app_data_dir().ok();
@@ -314,6 +405,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             open_image,
             export_image,
+            apply_edits,
+            get_applied_path,
             get_recent_files,
             set_recent_files
         ])
