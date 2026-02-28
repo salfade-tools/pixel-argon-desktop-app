@@ -22,6 +22,28 @@
   --radius-lg: 10px;
   --sidebar-width: 260px;
   --topbar-height: 48px;
+  --checker-a: #1a1c25;
+  --checker-b: #15171f;
+  --crop-shadow: rgba(0, 0, 0, 0.55);
+}
+
+:root.light {
+  --bg-primary: #f0f1f4;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8e9ed;
+  --bg-hover: #dcdde2;
+  --text-primary: #1a1c25;
+  --text-secondary: #5a5e6b;
+  --text-muted: #8b8f9d;
+  --accent: #3b6ce7;
+  --accent-hover: #2d5bd4;
+  --accent-glow: rgba(59, 108, 231, 0.12);
+  --border: #d1d3da;
+  --success: #388e3c;
+  --danger: #d32f2f;
+  --checker-a: #e0e1e5;
+  --checker-b: #d4d5d9;
+  --crop-shadow: rgba(0, 0, 0, 0.3);
 }
 
 html, body {
@@ -66,6 +88,11 @@ html, body {
   font-weight: 800;
   color: #9af7ff;
   text-shadow: 0 0 12px rgba(154, 247, 255, 0.4);
+}
+
+:root.light .app-logo {
+  color: #2a5fd6;
+  text-shadow: none;
 }
 
 .app-name {
@@ -287,7 +314,7 @@ button.primary:hover {
   justify-content: center;
   cursor: grab;
   background:
-    repeating-conic-gradient(#1a1c25 0% 25%, #15171f 0% 50%) 0 0 / 20px 20px;
+    repeating-conic-gradient(var(--checker-a, #1a1c25) 0% 25%, var(--checker-b, #15171f) 0% 50%) 0 0 / 20px 20px;
 }
 
 #canvas-container:active {
@@ -313,7 +340,7 @@ button.primary:hover {
 #crop-rect {
   position: absolute;
   border: 2px solid var(--accent);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 9999px var(--crop-shadow, rgba(0, 0, 0, 0.55));
   pointer-events: auto;
   cursor: move;
 }

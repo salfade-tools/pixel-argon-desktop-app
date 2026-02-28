@@ -109,6 +109,10 @@ function initApp() {
     });
   });
 
+  // Theme toggle
+  initTheme();
+  $("btn-theme").addEventListener("click", toggleTheme);
+
   // Open / Export
   $("btn-open").addEventListener("click", openFile);
   $("btn-export").addEventListener("click", showExportModal);
@@ -932,6 +936,22 @@ function showToast(message: string, type: "success" | "error" = "success") {
   setTimeout(() => {
     toast.className = "toast";
   }, 3000);
+}
+
+// ─── Theme ───────────────────────────────────────────────────────────────────
+
+function initTheme() {
+  const saved = localStorage.getItem("pixelargon-theme");
+  if (saved === "light") {
+    document.documentElement.classList.add("light");
+    $("btn-theme").textContent = "Dark";
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle("light");
+  $("btn-theme").textContent = isLight ? "Dark" : "Light";
+  localStorage.setItem("pixelargon-theme", isLight ? "light" : "dark");
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────
