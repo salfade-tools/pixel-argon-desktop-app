@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PixelArgon</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Top Bar -->
+      <header id="topbar">
+        <div class="topbar-left">
+          <span class="app-logo">Ar</span>
+          <span class="app-name">PixelArgon</span>
+        </div>
+        <div class="topbar-center">
+          <button id="btn-open" title="Open Image (Ctrl+O)">Open</button>
+          <button id="btn-export" title="Export (Ctrl+S)" disabled>Export</button>
+          <span id="image-info" class="image-info"></span>
+        </div>
+        <div class="topbar-right">
+          <button id="btn-recents" title="Recent Files">Recents</button>
+          <button id="btn-update" title="Check for Updates">Updates</button>
+        </div>
+      </header>
+
+      <!-- Main Area -->
+      <div id="main">
+        <!-- Left Sidebar -->
+        <aside id="sidebar">
+          <div class="sidebar-section">
+            <h3>Tools</h3>
+            <button class="tool-btn active" data-tool="select" title="Select/Move">
+              <span class="tool-icon">&#9995;</span> Select
+            </button>
+            <button class="tool-btn" data-tool="crop" title="Crop">
+              <span class="tool-icon">&#9974;</span> Crop
+            </button>
+            <button class="tool-btn" data-tool="pixelate" title="Pixelate Brush">
+              <span class="tool-icon">&#9641;</span> Pixelate
+            </button>
+            <button class="tool-btn" data-tool="eyedropper" title="Color Picker">
+              <span class="tool-icon">&#128167;</span> Pick Color
+            </button>
+          </div>
+
+          <!-- Crop Settings -->
+          <div id="crop-panel" class="sidebar-section" style="display:none">
+            <h3>Crop & Resize</h3>
+            <div class="field">
+              <label>Preset</label>
+              <select id="crop-preset">
+                <option value="free">Free</option>
+                <option value="1:1">1:1</option>
+                <option value="4:5">4:5</option>
+                <option value="16:9">16:9</option>
+                <option value="9:16">9:16</option>
+                <option value="3:2">3:2</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Width</label>
+                <input type="number" id="crop-width" min="1" value="800" />
+              </div>
+              <span class="field-sep">&times;</span>
+              <div class="field">
+                <label>Height</label>
+                <input type="number" id="crop-height" min="1" value="600" />
+              </div>
+            </div>
+            <div class="field">
+              <label>
+                <input type="checkbox" id="lock-aspect" /> Lock Aspect Ratio
+              </label>
+            </div>
+            <div class="field">
+              <label>Scale Mode</label>
+              <select id="scale-mode">
+                <option value="scale_then_crop">Scale to fit, then crop</option>
+                <option value="crop_then_scale">Crop, then scale</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Edit Panel -->
+          <div id="edit-panel" class="sidebar-section">
+            <h3>Adjustments</h3>
+            <div class="field">
+              <label>
+                <input type="checkbox" id="edit-grayscale" /> Grayscale
+              </label>
+            </div>
+            <div class="field">
+              <label>Brightness <span id="brightness-val">0</span></label>
+              <input type="range" id="edit-brightness" min="-100" max="100" value="0" />
+            </div>
+            <div class="field">
+              <label>Contrast <span id="contrast-val">0</span></label>
+              <input type="range" id="edit-contrast" min="-100" max="100" value="0" />
+            </div>
+            <div class="field-row">
+              <button id="btn-rotate-left" title="Rotate Left 90°">↺ Left</button>
+              <button id="btn-rotate-right" title="Rotate Right 90°">↻ Right</button>
+            </div>
+            <div class="field-row">
+              <button id="btn-flip-h" title="Flip Horizontal">↔ Flip H</button>
+              <button id="btn-flip-v" title="Flip Vertical">↕ Flip V</button>
+            </div>
+          </div>
+
+          <!-- Pixelate Settings -->
+          <div id="pixelate-panel" class="sidebar-section" style="display:none">
+            <h3>Pixelate Brush</h3>
+            <div class="field">
+              <label>Brush Size <span id="pixelate-size-val">20</span></label>
+              <input type="range" id="pixelate-size" min="5" max="100" value="20" />
+            </div>
+            <div class="field">
+              <label>Block Size <span id="pixelate-block-val">10</span></label>
+              <input type="range" id="pixelate-block" min="4" max="40" value="10" />
+            </div>
+            <div class="field-row">
+              <button id="btn-undo-stroke" title="Undo (Ctrl+Z)">Undo</button>
+              <button id="btn-redo-stroke" title="Redo (Ctrl+Shift+Z)">Redo</button>
+            </div>
+          </div>
+
+          <!-- Background Removal -->
+          <div id="bg-panel" class="sidebar-section">
+            <h3>Background Removal <span class="beta-badge">Beta</span></h3>
+            <div class="field">
+              <label>
+                <input type="checkbox" id="bg-enabled" /> Enable
+              </label>
+            </div>
+            <div class="field">
+              <label>Picked Color</label>
+              <div class="color-preview-row">
+                <div id="bg-color-preview" class="color-swatch"></div>
+                <span id="bg-color-text">#000000</span>
+              </div>
+              <small>Use the "Pick Color" tool to select a color from the image.</small>
+            </div>
+            <div class="field">
+              <label>Tolerance <span id="bg-tolerance-val">30</span></label>
+              <input type="range" id="bg-tolerance" min="0" max="100" value="30" />
+            </div>
+          </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <div id="canvas-area">
+          <div id="canvas-container">
+            <canvas id="main-canvas"></canvas>
+            <div id="crop-overlay" style="display:none">
+              <div id="crop-rect">
+                <div class="crop-handle" data-handle="nw"></div>
+                <div class="crop-handle" data-handle="ne"></div>
+                <div class="crop-handle" data-handle="sw"></div>
+                <div class="crop-handle" data-handle="se"></div>
+                <div class="crop-handle" data-handle="n"></div>
+                <div class="crop-handle" data-handle="s"></div>
+                <div class="crop-handle" data-handle="e"></div>
+                <div class="crop-handle" data-handle="w"></div>
+              </div>
+            </div>
+          </div>
+          <div id="zoom-bar">
+            <button id="btn-fit" title="Fit (1)">Fit</button>
+            <button id="btn-100" title="100% (2)">100%</button>
+            <button id="btn-zoom-out" title="Zoom Out">−</button>
+            <input type="range" id="zoom-slider" min="10" max="500" value="100" />
+            <button id="btn-zoom-in" title="Zoom In">+</button>
+            <span id="zoom-label">100%</span>
+          </div>
+          <div id="drop-zone" class="drop-zone">
+            <div class="drop-content">
+              <div class="drop-icon">&#128444;</div>
+              <p>Drop an image here or click <strong>Open</strong></p>
+              <p class="drop-hint">Supports PNG, JPEG, WebP</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Modal -->
+      <div id="export-modal" class="modal" style="display:none">
+        <div class="modal-content">
+          <h2>Export Image</h2>
+          <div class="field">
+            <label>Format</label>
+            <select id="export-format">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+            </select>
+          </div>
+          <div class="field" id="jpeg-quality-field" style="display:none">
+            <label>Quality <span id="jpeg-quality-val">90</span>%</label>
+            <input type="range" id="jpeg-quality" min="1" max="100" value="90" />
+          </div>
+          <div class="field">
+            <label>Output Size</label>
+            <span id="export-size-info"></span>
+          </div>
+          <div class="modal-actions">
+            <button id="btn-export-cancel">Cancel</button>
+            <button id="btn-export-confirm" class="primary">Export</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recents Modal -->
+      <div id="recents-modal" class="modal" style="display:none">
+        <div class="modal-content">
+          <h2>Recent Files</h2>
+          <div id="recents-list"></div>
+          <div class="modal-actions">
+            <button id="btn-recents-close">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Update Modal -->
+      <div id="update-modal" class="modal" style="display:none">
+        <div class="modal-content">
+          <h2>Updates</h2>
+          <div id="update-content">
+            <p>Checking for updates...</p>
+          </div>
+          <div class="modal-actions">
+            <button id="btn-update-close">Close</button>
+            <button id="btn-update-install" class="primary" style="display:none">Download &amp; Install</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast -->
+      <div id="toast" class="toast"></div>
+    </div>
+  </body>
+</html>
