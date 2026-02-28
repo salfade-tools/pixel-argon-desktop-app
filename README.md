@@ -93,15 +93,5 @@ git push origin v0.1.0
 
 The GitHub Actions workflow builds macOS Apple Silicon bundles and publishes them as a GitHub Release with updater metadata.
 
-### Updater Signing
-The Tauri updater requires a signing keypair. Generate one:
-```bash
-npx @tauri-apps/cli signer generate -w ~/.tauri/pixelargon.key
-```
-
-Set these as GitHub Secrets:
-- `TAURI_SIGNING_PRIVATE_KEY` — contents of the private key file
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — the password used during generation
-
 ## License
 MIT
