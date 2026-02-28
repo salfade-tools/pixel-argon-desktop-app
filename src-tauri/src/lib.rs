@@ -277,6 +277,7 @@ fn chroma_key(img: &mut RgbaImage, color: (u8, u8, u8), tolerance: f64) {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ApplyPayload {
     pub source_path: String,
+    pub crop: Option<CropRect>,
     pub rotation: i32,
     pub flip_h: bool,
     pub flip_v: bool,
@@ -334,6 +335,20 @@ fn apply_edits(app: tauri::AppHandle, payload: ApplyPayload) -> Result<ImageInfo
             }
         }
         img = DynamicImage::ImageRgba8(rgba);
+    }
+
+    // Crop
+    if let Some(ref crop) = payload.crop {
+        let (iw, ih) = img.dimensions();
+        let cx = (crop.x * iw as f64).round() as u32;
+        let cy = (crop.y * ih as f64).round() as u32;
+        let cw = (crop.width * iw as f64).round().max(1.0) as u32;
+        let ch = (crop.height * ih as f64).round().max(1.0) as u32;
+        let cx = cx.min(iw.saturating_sub(1));
+        let cy = cy.min(ih.saturating_sub(1));
+        let cw = cw.min(iw - cx);
+        let ch = ch.min(ih - cy);
+        img = img.crop_imm(cx, cy, cw, ch);
     }
 
     // Save to temp file

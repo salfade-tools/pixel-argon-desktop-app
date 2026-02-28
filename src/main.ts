@@ -937,7 +937,11 @@ function onKeyDown(e: KeyboardEvent) {
 async function applyEdits() {
   if (!state.sourcePath) return;
 
+  const hasCrop =
+    state.cropX > 0 || state.cropY > 0 || state.cropW < 1 || state.cropH < 1;
+
   const hasEdits =
+    hasCrop ||
     state.rotation !== 0 ||
     state.flipH ||
     state.flipV ||
@@ -955,6 +959,9 @@ async function applyEdits() {
     const info: ImageInfo = await invoke("apply_edits", {
       payload: {
         source_path: state.sourcePath,
+        crop: hasCrop
+          ? { x: state.cropX, y: state.cropY, width: state.cropW, height: state.cropH }
+          : null,
         rotation: state.rotation,
         flip_h: state.flipH,
         flip_v: state.flipV,
@@ -981,6 +988,14 @@ async function applyEdits() {
     state.contrast = 0;
     state.pixelateStrokes = [];
     state.pixelateRedoStack = [];
+    state.cropX = 0;
+    state.cropY = 0;
+    state.cropW = 1;
+    state.cropH = 1;
+    state.targetWidth = info.width;
+    state.targetHeight = info.height;
+    ($("crop-width") as HTMLInputElement).value = String(info.width);
+    ($("crop-height") as HTMLInputElement).value = String(info.height);
 
     ($("edit-brightness") as HTMLInputElement).value = "0";
     ($("edit-contrast") as HTMLInputElement).value = "0";
