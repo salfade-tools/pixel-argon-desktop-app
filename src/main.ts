@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open as dialogOpen, save as dialogSave } from "@tauri-apps/plugin-dialog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -238,22 +239,23 @@ function initApp() {
   container.addEventListener("mouseleave", onCanvasMouseUp);
   container.addEventListener("wheel", onCanvasWheel, { passive: false });
 
-  // Drop zone
+  // Drop zone (Tauri native drag-and-drop)
   const dropZone = $("drop-zone");
-  document.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropZone.classList.add("drag-over");
-  });
-  document.addEventListener("dragleave", () => {
-    dropZone.classList.remove("drag-over");
-  });
-  document.addEventListener("drop", async (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag-over");
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      const path = (files[0] as any).path;
-      if (path) await loadImage(path);
+  const appWindow = getCurrentWebviewWindow();
+  appWindow.onDragDropEvent((event) => {
+    if (event.payload.type === "over") {
+      dropZone.classList.add("drag-over");
+    } else if (event.payload.type === "drop") {
+      dropZone.classList.remove("drag-over");
+      const paths = event.payload.paths;
+      if (paths && paths.length > 0) {
+        const ext = paths[0].split(".").pop()?.toLowerCase();
+        if (["png", "jpg", "jpeg", "webp"].includes(ext || "")) {
+          loadImage(paths[0]);
+        }
+      }
+    } else {
+      dropZone.classList.remove("drag-over");
     }
   });
 
