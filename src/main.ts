@@ -54,6 +54,14 @@ interface AppState {
   isPixelatePainting: boolean;
   currentStroke: PixelateStroke | null;
 
+  // Resize
+  resizeW: number;
+  resizeH: number;
+  resizeLockAspect: boolean;
+  originalPath: string | null;
+  originalWidth: number;
+  originalHeight: number;
+
   // Background removal
   bgEnabled: boolean;
   bgColor: [number, number, number];
@@ -90,6 +98,12 @@ const state: AppState = {
   pixelateBlockSize: 10,
   isPixelatePainting: false,
   currentStroke: null,
+  resizeW: 0,
+  resizeH: 0,
+  resizeLockAspect: true,
+  originalPath: null,
+  originalWidth: 0,
+  originalHeight: 0,
   bgEnabled: false,
   bgColor: [0, 0, 0],
   bgTolerance: 30,
@@ -205,6 +219,21 @@ function initApp() {
     $("bg-tolerance-val").textContent = String(state.bgTolerance);
   });
 
+  // Resize controls
+  $("resize-width").addEventListener("input", onResizeWidthChange);
+  $("resize-height").addEventListener("input", onResizeHeightChange);
+  $("resize-lock-aspect").addEventListener("change", () => {
+    state.resizeLockAspect = ($("resize-lock-aspect") as HTMLInputElement).checked;
+  });
+  document.querySelectorAll<HTMLButtonElement>(".resize-preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const percent = parseInt(btn.dataset.percent!);
+      applyResizePreset(percent);
+    });
+  });
+  $("btn-apply-resize").addEventListener("click", applyResize);
+  $("btn-restore-original").addEventListener("click", restoreOriginal);
+
   // Export modal
   $("btn-export-cancel").addEventListener("click", () => {
     $("export-modal").style.display = "none";
@@ -308,6 +337,7 @@ async function loadImage(path: string) {
   try {
     const info: ImageInfo = await invoke("open_image", { path });
     state.sourcePath = path;
+    state.originalPath = path;
     state.imageWidth = info.width;
     state.imageHeight = info.height;
     state.rotation = 0;
@@ -332,6 +362,15 @@ async function loadImage(path: string) {
     $("contrast-val").textContent = "0";
     ($("crop-width") as HTMLInputElement).value = String(info.width);
     ($("crop-height") as HTMLInputElement).value = String(info.height);
+
+    // Populate resize fields
+    state.resizeW = info.width;
+    state.resizeH = info.height;
+    state.originalWidth = info.width;
+    state.originalHeight = info.height;
+    ($("resize-width") as HTMLInputElement).value = String(info.width);
+    ($("resize-height") as HTMLInputElement).value = String(info.height);
+    $("resize-current-size").textContent = `${info.width} \u00d7 ${info.height}`;
 
     const img = new Image();
     img.onload = () => {
@@ -778,6 +817,127 @@ function redoStroke() {
   }
 }
 
+// ─── Resize ──────────────────────────────────────────────────────────────
+
+function onResizeWidthChange() {
+  const w = ($("resize-width") as HTMLInputElement).valueAsNumber;
+  if (!w || w < 1) return;
+  state.resizeW = w;
+  if (state.resizeLockAspect && state.originalWidth > 0) {
+    const aspect = state.originalHeight / state.originalWidth;
+    state.resizeH = Math.round(w * aspect);
+    ($("resize-height") as HTMLInputElement).value = String(state.resizeH);
+  }
+}
+
+function onResizeHeightChange() {
+  const h = ($("resize-height") as HTMLInputElement).valueAsNumber;
+  if (!h || h < 1) return;
+  state.resizeH = h;
+  if (state.resizeLockAspect && state.originalHeight > 0) {
+    const aspect = state.originalWidth / state.originalHeight;
+    state.resizeW = Math.round(h * aspect);
+    ($("resize-width") as HTMLInputElement).value = String(state.resizeW);
+  }
+}
+
+function applyResizePreset(percent: number) {
+  if (state.originalWidth === 0 || state.originalHeight === 0) return;
+  state.resizeW = Math.round(state.originalWidth * percent / 100);
+  state.resizeH = Math.round(state.originalHeight * percent / 100);
+  ($("resize-width") as HTMLInputElement).value = String(state.resizeW);
+  ($("resize-height") as HTMLInputElement).value = String(state.resizeH);
+}
+
+async function applyResize() {
+  if (!state.sourcePath) return;
+
+  const w = ($("resize-width") as HTMLInputElement).valueAsNumber;
+  const h = ($("resize-height") as HTMLInputElement).valueAsNumber;
+  if (!w || !h || w < 1 || h < 1) {
+    showToast("Enter valid width and height", "error");
+    return;
+  }
+
+  if (w === state.imageWidth && h === state.imageHeight) {
+    showToast("Dimensions unchanged", "error");
+    return;
+  }
+
+  try {
+    const info: ImageInfo = await invoke("apply_edits", {
+      payload: {
+        source_path: state.sourcePath,
+        crop: null,
+        rotation: 0,
+        flip_h: false,
+        flip_v: false,
+        grayscale: false,
+        brightness: 0.0,
+        contrast: 0.0,
+        pixelate_strokes: [],
+        pixelate_block_size: state.pixelateBlockSize,
+        resize_width: w,
+        resize_height: h,
+      },
+    });
+
+    const appliedPath: string = await invoke("get_applied_path");
+    state.sourcePath = appliedPath;
+    state.imageWidth = info.width;
+    state.imageHeight = info.height;
+    state.resizeW = info.width;
+    state.resizeH = info.height;
+    state.originalWidth = info.width;
+    state.originalHeight = info.height;
+    state.targetWidth = info.width;
+    state.targetHeight = info.height;
+
+    ($("resize-width") as HTMLInputElement).value = String(info.width);
+    ($("resize-height") as HTMLInputElement).value = String(info.height);
+    $("resize-current-size").textContent = `${info.width} \u00d7 ${info.height}`;
+    ($("crop-width") as HTMLInputElement).value = String(info.width);
+    ($("crop-height") as HTMLInputElement).value = String(info.height);
+    $("image-info").textContent = `${info.width} \u00d7 ${info.height} \u2014 Applied`;
+
+    const img = new Image();
+    img.onload = () => {
+      loadedImage = img;
+      renderCanvas();
+      if (state.tool === "crop") updateCropOverlay();
+    };
+    img.src = info.data_url;
+
+    showToast(`Resized to ${info.width} \u00d7 ${info.height}`, "success");
+  } catch (e: any) {
+    showToast("Resize failed: " + e, "error");
+  }
+}
+
+async function restoreOriginal() {
+  if (!state.originalPath) {
+    showToast("No original image to restore", "error");
+    return;
+  }
+
+  if (state.sourcePath === state.originalPath) {
+    // Just reset the input fields to current dimensions
+    state.resizeW = state.imageWidth;
+    state.resizeH = state.imageHeight;
+    ($("resize-width") as HTMLInputElement).value = String(state.imageWidth);
+    ($("resize-height") as HTMLInputElement).value = String(state.imageHeight);
+    showToast("Fields reset", "success");
+    return;
+  }
+
+  try {
+    await loadImage(state.originalPath);
+    showToast("Original image restored", "success");
+  } catch (e: any) {
+    showToast("Restore failed: " + e, "error");
+  }
+}
+
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 function showExportModal() {
@@ -970,6 +1130,8 @@ async function applyEdits() {
         contrast: state.contrast,
         pixelate_strokes: state.pixelateStrokes,
         pixelate_block_size: state.pixelateBlockSize,
+        resize_width: 0,
+        resize_height: 0,
       },
     });
 
@@ -996,6 +1158,15 @@ async function applyEdits() {
     state.targetHeight = info.height;
     ($("crop-width") as HTMLInputElement).value = String(info.width);
     ($("crop-height") as HTMLInputElement).value = String(info.height);
+
+    // Update resize fields after apply
+    state.resizeW = info.width;
+    state.resizeH = info.height;
+    state.originalWidth = info.width;
+    state.originalHeight = info.height;
+    ($("resize-width") as HTMLInputElement).value = String(info.width);
+    ($("resize-height") as HTMLInputElement).value = String(info.height);
+    $("resize-current-size").textContent = `${info.width} \u00d7 ${info.height}`;
 
     ($("edit-brightness") as HTMLInputElement).value = "0";
     ($("edit-contrast") as HTMLInputElement).value = "0";

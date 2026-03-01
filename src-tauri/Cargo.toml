@@ -1,6 +1,6 @@
 [package]
 name = "pixelargon"
-version = "0.1.0"
+version = "0.2.0"
 description = "PixelArgon - Simple Image Crop & Edit Desktop App"
 authors = ["PixelArgon"]
 edition = "2021"

@@ -114,6 +114,45 @@
             <button id="btn-apply" class="primary apply-btn" title="Apply adjustments to image">Apply</button>
           </div>
 
+          <!-- Resize Panel -->
+          <div id="resize-panel" class="sidebar-section">
+            <h3>Resize</h3>
+            <div class="field">
+              <label>Current Size</label>
+              <span id="resize-current-size">— × —</span>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Width</label>
+                <input type="number" id="resize-width" min="1" value="0" />
+              </div>
+              <span class="field-sep">&times;</span>
+              <div class="field">
+                <label>Height</label>
+                <input type="number" id="resize-height" min="1" value="0" />
+              </div>
+            </div>
+            <div class="field">
+              <label>
+                <input type="checkbox" id="resize-lock-aspect" checked /> Lock Aspect Ratio
+              </label>
+            </div>
+            <div class="field">
+              <label>Quick Presets</label>
+              <div class="field-row" style="flex-wrap:wrap;gap:4px">
+                <button class="resize-preset-btn" data-percent="25">25%</button>
+                <button class="resize-preset-btn" data-percent="50">50%</button>
+                <button class="resize-preset-btn" data-percent="75">75%</button>
+                <button class="resize-preset-btn" data-percent="150">150%</button>
+                <button class="resize-preset-btn" data-percent="200">200%</button>
+              </div>
+            </div>
+            <div class="field-row">
+              <button id="btn-restore-original" title="Restore original image">Restore Original</button>
+              <button id="btn-apply-resize" class="primary apply-btn" title="Apply resize to image">Apply Resize</button>
+            </div>
+          </div>
+
           <!-- Pixelate Settings -->
           <div id="pixelate-panel" class="sidebar-section" style="display:none">
             <h3>Pixelate Brush</h3>

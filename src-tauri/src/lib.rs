@@ -286,6 +286,8 @@ pub struct ApplyPayload {
     pub contrast: f64,
     pub pixelate_strokes: Vec<PixelateStroke>,
     pub pixelate_block_size: u32,
+    pub resize_width: u32,
+    pub resize_height: u32,
 }
 
 #[tauri::command]
@@ -349,6 +351,18 @@ fn apply_edits(app: tauri::AppHandle, payload: ApplyPayload) -> Result<ImageInfo
         let cw = cw.min(iw - cx);
         let ch = ch.min(ih - cy);
         img = img.crop_imm(cx, cy, cw, ch);
+    }
+
+    // Resize
+    if payload.resize_width > 0 && payload.resize_height > 0 {
+        let (cw, ch) = img.dimensions();
+        if payload.resize_width != cw || payload.resize_height != ch {
+            img = img.resize_exact(
+                payload.resize_width,
+                payload.resize_height,
+                image::imageops::FilterType::Lanczos3,
+            );
+        }
     }
 
     // Save to temp file
